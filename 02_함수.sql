@@ -329,14 +329,47 @@ FROM EMPLOYEE;
 -- 하나 이상의 행을 그룹으로 묶어 연산하여 총합, 평균 등의
 -- 하나의 결과 행으로 반환하는 함수
 
+-- SUM(숫자가 기록된 컬럼명) : 합계
+-- 모든 직원의 급여 합 조회
+SELECT SUM(SALARY) FROM EMPLOYEE; -- 70,096,240
+
+-- AVG(숫자가 기록된 컬럼명) : 평균
+-- 전 직원 급여 평균
+SELECT ROUND(AVG(SALARY)) FROM EMPLOYEE; -- 3,047,663
+
+-- 부서코드가 'D9'인 사원들의 급여 합, 평균
+/* 3 */SELECT SUM(SALARY), ROUND(AVG(SALARY))
+/* 1 */FROM EMPLOYEE
+/* 2 */WHERE DEPT_CODE = 'D9';
 
 
+-- MIN(컬럼명) : 최소값
+-- MAX(컬럼명) : 최대값
+--> 타입 제한 없음(숫자 : 대/소, 날짜 : 과거/미래, 문자열 : 문자 순서)
+
+-- 급여 최소값, 가장빠른 입사일, 알파벳순서가 가장빠른 이메일 조회
+SELECT MIN(SALARY), MIN(HIRE_DATE), MIN(EMAIL)
+FROM EMPLOYEE;
 
 
+-- 급여 최대값, 가장 최근 입사일,알파벳순서가 가장느린 이메일 조회
+SELECT MAX(SALARY), MAX(HIRE_DATE), MAX(EMAIL)
+FROM EMPLOYEE;
 
 
+-- EMPLOYEE 테이블에서
+-- 급여를 가장 많이 받는 사원의
+-- 이름, 급여, 직급코드를 조회
+SELECT EMP_NAME, SALARY, JOB_CODE
+FROM EMPLOYEE
+WHERE SALARY = (SELECT MAX(SALARY) FROM EMPLOYEE);
 
+-- 서브쿼리 + 그룹함수
+SELECT MAX(SALARY) FROM EMPLOYEE;
 
+-- COUNT() : 행 개수를 헤아려서 반환
+-- COUNT(컬럼명) : NULL을 제외한 실제값이 기록된 행 개수를 리턴
+-- COUNT(*) : NULL을 포함한 전체 행 개수를 리턴
+-- COUNT([DISTINCT] 컬럼명) : 중복을 제거한 행 개수를 리턴
 
-
-
+SELECT COUNT(DISTINCT JOB_CODE) FROM EMPLOYEE;
