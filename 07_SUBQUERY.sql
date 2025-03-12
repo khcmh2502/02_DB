@@ -266,3 +266,254 @@ JOIN JOB USING(JOB_CODE)
 LEFT JOIN DEPARTMENT ON(DEPT_CODE = DEPT_ID)
 ORDER BY EMP_ID;
 
+
+-- 대리 직급의 직원들 중에서
+-- 과장 직급의 최소 급여보다
+-- 많이 받는 직원의
+-- 사번, 이름, 직급명, 급여 조회
+
+-- > ANY : 가장 작은 값보다 크냐?
+
+-- 1) 직급이 대리인 직원들의 사번, 이름, 직급, 급여 조회(메인쿼리)
+SELECT EMP_ID, EMP_NAME, JOB_NAME, SALARY
+FROM EMPLOYEE
+JOIN JOB USING(JOB_CODE)
+WHERE JOB_NAME = '대리';
+
+-- 2) 직급이 과장인 직원들의 급여 조회 (서브쿼리)
+SELECT SALARY
+FROM EMPLOYEE
+JOIN JOB USING(JOB_CODE)
+WHERE JOB_NAME = '과장';
+
+
+-- 3) 대리 직급의 직원들 중에서
+-- 과장 직급의 최소 급여보다
+-- 많이 받는 직원의
+-- 사번, 이름, 직급명, 급여 조회
+
+-- 방법1) ANY 를 이용하기
+SELECT EMP_ID, EMP_NAME, JOB_NAME, SALARY
+FROM EMPLOYEE
+JOIN JOB USING(JOB_CODE)
+WHERE JOB_NAME = '대리'
+AND SALARY > ANY (SELECT SALARY
+									FROM EMPLOYEE
+									JOIN JOB USING(JOB_CODE)
+									WHERE JOB_NAME = '과장');
+
+--   > ANY : 가장 작은값 보다 큰가? 
+-- > 과장 직급 최소급여보다 큰 급여를 받는 대리인가?
+
+--   < ANY : 가장 큰 값보다 작은가?
+-- > 과장 직급 최대급여보다 적은 급여를 받는 대리인가?
+
+
+-- 대리 직급의 직원들 중에서
+-- 과장 직급의 최소 급여보다
+-- 많이 받는 직원의
+-- 사번, 이름, 직급명, 급여 조회
+
+-- 방법2) MIN을 이용해서 단일행 서브쿼리로 만듦
+SELECT EMP_ID, EMP_NAME, JOB_NAME, SALARY
+FROM EMPLOYEE
+JOIN JOB USING(JOB_CODE)
+WHERE JOB_NAME = '대리'
+AND SALARY > ( SELECT MIN(SALARY) 
+							FROM EMPLOYEE
+							JOIN JOB USING(JOB_CODE)
+							WHERE JOB_NAME = '과장');
+
+
+-- 차장 직급의 급여 중 가장 큰 값보다 많이 받는 과장 직급의 직원
+-- 사번, 이름, 직급, 급여 조회
+
+-- > ALL, < ALL : 가장 큰 값보다 크냐? / 가장 작은 값보다 작냐?
+
+-- 서브쿼리
+SELECT SALARY 
+FROM EMPLOYEE
+JOIN JOB USING(JOB_CODE)
+WHERE JOB_NAME = '차장';
+
+-- 메인 쿼리 + 서브 쿼리
+SELECT EMP_ID, EMP_NAME, JOB_NAME, SALARY
+FROM EMPLOYEE
+JOIN JOB USING(JOB_CODE)
+WHERE JOB_NAME = '과장'
+AND SALARY > ALL (SELECT SALARY 
+								FROM EMPLOYEE
+								JOIN JOB USING(JOB_CODE)
+								WHERE JOB_NAME = '차장');
+
+--   > ALL : 가장 큰값보다 큰가 ? 
+--	>  차장 직급의 최대급여보다 많이 받는 과장인가?
+
+
+--   < ALL : 가장 작은 값보다 작은가 ?
+--  >  차장 직급의 최소급여보다 적게 받는 과장인가?
+
+
+-- 서브쿼리 중첩 사용 (응용편!)
+
+-- LOCATION 테이블에서 NATIONAL_CODE가 KO인 경우의 LOCAL_CODE와
+-- DEPARTMENT 테이블의 LOCATION_ID와 동일한 DEPT_ID가
+-- EMPLOYEE 테이블의 DEPT_CODE와 동일한 사원 조회해라.
+
+-- 1) LOCATION 테이블에서 NATIONAL_CODE가 KO인 경우의 LOCAL_CODE 조회
+SELECT LOCAL_CODE
+FROM LOCATION
+WHERE NATIONAL_CODE = 'KO'; -- L1 (단일행 서브쿼리)
+
+
+-- 2) DEPARTMENT 테이블에서 위의 결과(L1)와 
+-- 동일한 LOCATION_ID를 가진 DEPT_ID 조회
+SELECT DEPT_ID
+FROM DEPARTMENT 
+WHERE LOCATION_ID = (SELECT LOCAL_CODE
+										FROM LOCATION
+										WHERE NATIONAL_CODE = 'KO');
+
+-- 3) 최종적으로 EMPLOYEE 테이블에서 위의 결과들과 
+-- 동일한 DEPT_CODE를 가진 사원 조회
+
+SELECT EMP_NAME, DEPT_CODE 
+FROM EMPLOYEE
+WHERE DEPT_CODE IN (SELECT DEPT_ID
+									FROM DEPARTMENT 
+									WHERE LOCATION_ID = (SELECT LOCAL_CODE
+																			FROM LOCATION
+																			WHERE NATIONAL_CODE = 'KO'));	
+
+
+----------------------------------------------------------------
+
+-- 3. (단일행) 다중열 서브쿼리
+-- 서브쿼리 SELECT 절에 나열된 컬럼수가 여러개 일 때 
+
+-- 퇴사한 여직원과 같은 부서, 같은 직급에 해당하는
+-- 사원의 이름, 직급코드, 부서코드, 입사일 조회
+
+-- 1) 퇴사한 여직원 조회
+SELECT DEPT_CODE, JOB_CODE
+FROM EMPLOYEE
+WHERE ENT_YN = 'Y'
+AND SUBSTR(EMP_NO, 8, 1) = '2'; -- D8 J6 (이태림)
+
+
+-- 2) 퇴사한 여직원과 같은 부서, 같은 직급 조회
+
+-- 방법 1) 단일행 단일열 서브쿼리 2개를 사용해서 조회
+SELECT DEPT_CODE
+FROM EMPLOYEE
+WHERE ENT_YN = 'Y'
+AND SUBSTR(EMP_NO, 8, 1) = '2';
+
+SELECT JOB_CODE
+FROM EMPLOYEE
+WHERE ENT_YN = 'Y'
+AND SUBSTR(EMP_NO, 8, 1) = '2';
+
+
+SELECT EMP_NAME, JOB_CODE, DEPT_CODE, HIRE_DATE
+FROM EMPLOYEE
+WHERE DEPT_CODE = (SELECT DEPT_CODE
+									FROM EMPLOYEE
+									WHERE ENT_YN = 'Y'
+									AND SUBSTR(EMP_NO, 8, 1) = '2')
+AND JOB_CODE = (SELECT JOB_CODE
+							FROM EMPLOYEE
+							WHERE ENT_YN = 'Y'
+							AND SUBSTR(EMP_NO, 8, 1) = '2');
+
+
+
+-- 방법 2) 다중열 서브쿼리 사용
+--> WHERE 절에 작성된 컬럼 순서에 맞게
+-- 서브쿼리의 조회된 컬럼과 비교하여 일치하는 행만 조회
+-- 컬럼 순서가 중요!!!
+SELECT EMP_NAME, JOB_CODE, DEPT_CODE, HIRE_DATE
+FROM EMPLOYEE
+WHERE ( DEPT_CODE, JOB_CODE ) = (SELECT DEPT_CODE, JOB_CODE
+																FROM EMPLOYEE
+																WHERE ENT_YN = 'Y'
+																AND SUBSTR(EMP_NO, 8, 1) = '2');
+
+
+---------------연습 문제 ---------------------------
+
+-- 1. 노옹철 사원과 같은 부서, 같은 직급인 사원을 조회(단, 노옹철 제외)
+-- 사번, 이름, 부서코드, 직급코드, 부서명, 직급명
+SELECT EMP_ID, EMP_NAME, DEPT_CODE, 
+JOB_CODE, DEPT_TITLE, JOB_NAME
+FROM EMPLOYEE
+JOIN JOB USING(JOB_CODE)
+LEFT JOIN DEPARTMENT ON(DEPT_CODE = DEPT_ID)
+WHERE (DEPT_CODE, JOB_CODE) = (SELECT DEPT_CODE, JOB_CODE 
+																FROM EMPLOYEE
+																WHERE EMP_NAME = '노옹철')
+AND EMP_NAME != '노옹철';
+
+
+
+-- 2. 2000년도에 입사한 사원의 부서와 직급이 같은 사원을 조회
+--    사번, 이름, 부서코드, 직급코드, 입사일     
+
+SELECT EMP_ID, EMP_NAME, DEPT_CODE, JOB_CODE, HIRE_DATE
+FROM EMPLOYEE
+WHERE (DEPT_CODE, JOB_CODE) 
+= (SELECT DEPT_CODE, JOB_CODE
+FROM EMPLOYEE
+WHERE EXTRACT(YEAR FROM HIRE_DATE) = 2000);
+
+
+
+-- 3. 77년생 여자 사원과 동일한 부서이면서 
+-- 동일한 사수를 가지고 있는 사원 조회
+-- 사번, 이름, 부서코드, 사수번호, 주민번호, 입사일    
+
+SELECT EMP_ID, EMP_NAME, DEPT_CODE, 
+MANAGER_ID, EMP_NO, HIRE_DATE
+FROM EMPLOYEE
+WHERE (DEPT_CODE, MANAGER_ID) = 
+(SELECT DEPT_CODE, MANAGER_ID
+FROM EMPLOYEE
+WHERE EMP_NO LIKE '77%'
+AND SUBSTR(EMP_NO, 8, 1) = '2');
+
+--------------------------------------------------
+
+-- 4. 다중행 다중열 서브쿼리
+-- 서브쿼리 조회 결과 행 수와 열 수가 여러개 일 때
+
+-- 본인이 소속된 직급의 평균 급여를 받고있는 직원의
+-- 사번, 이름, 직급코드, 급여 조회
+-- 단, 급여와 급여 평균은 만원단위로 조회 TRUNC(컬럼명, -4)
+
+-- 1) 직급별 평균 급여 (서브쿼리)
+SELECT JOB_CODE, TRUNC(AVG(SALARY), -4)
+FROM EMPLOYEE
+GROUP BY JOB_CODE;
+
+
+-- 2) 사번, 이름, 직급코드, 급여 조회 (메인쿼리 + 서브쿼리)
+SELECT EMP_ID, EMP_NAME, JOB_CODE, SALARY
+FROM EMPLOYEE
+WHERE (JOB_CODE, SALARY) IN 
+(SELECT JOB_CODE, TRUNC(AVG(SALARY), -4)
+FROM EMPLOYEE
+GROUP BY JOB_CODE);
+
+-----------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
