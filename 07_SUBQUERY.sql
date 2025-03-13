@@ -740,7 +740,50 @@ FROM (SELECT DEPT_CODE, DEPT_TITLE, CEIL(AVG(SALARY)) 평균급여
 WHERE ROWNUM <= 3;
 
 
+---------------------------------------------------------
 
+-- 8. WITH
+-- 서브쿼리에 이름을 붙여주고 사용 시 이름을 사용하게 함
+-- 인라인뷰로 사용될 서브쿼리에 주로 사용됨
+-- 실행속도가 빨라진다는 장점이 있음.
+
+-- 전직원의 급여 10 순위
+-- 순위, 이름, 급여 조회
+
+
+
+WITH TOP_SAL AS(SELECT EMP_NAME, SALARY
+FROM EMPLOYEE
+ORDER BY SALARY DESC)
+SELECT ROWNUM, EMP_NAME, SALARY
+FROM TOP_SAL
+WHERE ROWNUM <= 10;
+
+
+--------------------------------------------------
+
+-- 9. RANK() OVER / DENSE_RANK() OVER
+
+-- RANK() OVER : 동일한 순위 이후의 등수를 동일한 인원 수 만큼 건너 뛰고 순위 계산
+-- EX) 공동1위가 2명 다음순위 2위가 아닌 3위
+
+-- 사원별 급여 순위
+-- RANK() OVER(정렬순서) / DENSE_RANK() OVER(정렬순서)
+SELECT RANK() OVER(ORDER BY SALARY DESC) 순위, 
+EMP_NAME, SALARY
+FROM EMPLOYEE;
+-- 19	전형돈	2000000
+-- 19	윤은해	2000000
+-- 21	박나라	1800000
+
+-- DENSE_RANK() OVER : 동일한 순위 이후의 등수를 이후 순위로 계산
+-- EX) 공동 1위가 2명이어도 다음 순위는 2위
+SELECT DENSE_RANK() OVER(ORDER BY SALARY DESC) 순위, 
+EMP_NAME, SALARY
+FROM EMPLOYEE;
+-- 19	전형돈	2000000
+-- 19	윤은해	2000000
+-- 20	박나라	1800000
 
 
 
