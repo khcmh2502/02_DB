@@ -506,6 +506,132 @@ GROUP BY JOB_CODE);
 
 -----------------------------------------------------
 
+-- 5. 상[호연]관 서브쿼리
+-- 상관 쿼리는 메인쿼리가 사용하는 테이블값을 서브쿼리가 이용해서 결과를 만듦.
+-- 메인쿼리의 테이블값이 변경되면 서브쿼리의 결과값도 바뀌게 되는 구조
+
+-- 상관쿼리는 먼저 메인쿼리 한 행을 조회하고
+-- 해당 행이 서브쿼리의 조건을 충족하는지 확인하여 SELECT 를 진행함
+
+-- ** 해석순서가 기존 서브쿼리와는 다르다 **
+-- 메인쿼리 1행 -> 1행에 대한 서브쿼리를 수행
+-- 메인쿼리 2행 -> 2행에 대한 서브쿼리를 수행..
+-- ...
+-- 메인쿼리의 행의 수 만큼 서브쿼리가 생성되어 진행됨
+
+
+-- 직급별 급여 평균보다 급여를 많이 받는 직원의
+-- 이름, 직급코드, 급여 조회
+
+-- 메인쿼리
+SELECT EMP_NAME, JOB_CODE, SALARY
+FROM EMPLOYEE;
+
+-- 서브쿼리
+SELECT AVG(SALARY)
+FROM EMPLOYEE
+WHERE JOB_CODE = 'J4'; -- 2,330,000
+
+
+
+-- 상관쿼리
+SELECT EMP_NAME, JOB_CODE, SALARY
+FROM EMPLOYEE MAIN
+WHERE SALARY > (SELECT AVG(SALARY)
+								FROM EMPLOYEE SUB
+								WHERE MAIN.JOB_CODE = SUB.JOB_CODE);
+
+
+
+----------------------------------------------------
+
+-- 사수가 있는 직원의 사번, 이름, 부서명, 사수사번 조회
+--> 상관 서브쿼리를 사용하여 각 직원의 MANAGER_ID가
+-- 실제로 직원 테이블의 EMP_ID와 일치하는지 확인
+
+-- 메인쿼리 (직원의 사번, 이름, 부서명, 사수사번 조회)
+SELECT EMP_ID, EMP_NAME, DEPT_TITLE, MANAGER_ID
+FROM EMPLOYEE
+LEFT JOIN DEPARTMENT ON (DEPT_CODE = DEPT_ID);
+
+
+-- 서브쿼리 (사수인 직원 조회)
+SELECT EMP_ID
+FROM EMPLOYEE
+WHERE EMP_ID = 100;
+
+
+-- 상관쿼리
+SELECT EMP_ID, EMP_NAME, DEPT_TITLE, MANAGER_ID
+FROM EMPLOYEE MAIN
+LEFT JOIN DEPARTMENT ON (DEPT_CODE = DEPT_ID)
+WHERE MANAGER_ID = (SELECT EMP_ID
+										FROM EMPLOYEE SUB
+										WHERE SUB.EMP_ID = MAIN.MANAGER_ID);
+
+--------------------------------------------
+
+-- 부서별 입사일이 가장빠른 사원의
+-- 사번, 이름, 부서코드, 부서명(NULL 이면 '소속없음'), 
+-- 직급명, 입사일을 조회하고 
+-- 입사일이 빠른순으로 정렬해라. 
+-- 단, 퇴사한 직원은 제외해라.
+
+
+-- 메인쿼리(사번, 이름, 부서코드, 부서명(NULL 이면 '소속없음'), 
+-- 직급명, 입사일을 조회, 단, 퇴사한 직원은 제외해라.)
+SELECT EMP_ID, EMP_NAME, DEPT_CODE, NVL(DEPT_TITLE, '소속없음'),
+JOB_NAME, HIRE_DATE
+FROM EMPLOYEE
+JOIN JOB USING(JOB_CODE)
+LEFT JOIN DEPARTMENT ON(DEPT_ID = DEPT_CODE)
+WHERE ENT_YN = 'N';
+
+-- 서브쿼리(부서별 입사일이 가장빠른 사원)
+SELECT MIN(HIRE_DATE)
+FROM EMPLOYEE
+WHERE DEPT_CODE = 'D8';
+
+
+-- 1번째 상관쿼리(이태림이 D8부서에서 가장빠른 입사&퇴사자여서 걸러짐
+-- D8부서 아예 제외)
+-- D8부서의 가장 빠른 입사일 : 1997-09-12 00:00:00.000
+-- 메인쿼리에서 퇴사자 & D8부서의 가장빠른입사일인 이태림을 제외시킨 상태
+SELECT EMP_ID, EMP_NAME, DEPT_CODE, NVL(DEPT_TITLE, '소속없음'),
+JOB_NAME, HIRE_DATE
+FROM EMPLOYEE MAIN
+JOIN JOB USING(JOB_CODE)
+LEFT JOIN DEPARTMENT ON(DEPT_ID = DEPT_CODE)
+WHERE ENT_YN = 'N'
+AND HIRE_DATE = (SELECT MIN(HIRE_DATE)
+								FROM EMPLOYEE SUB
+								WHERE MAIN.DEPT_CODE = SUB.DEPT_CODE)
+ORDER BY HIRE_DATE;
+
+
+
+
+
+-- 2번째 상관쿼리 (퇴사자인 이태림 제외한 상태로, D8부서의 가장 빠른 입사자도 포함)
+SELECT EMP_ID, EMP_NAME, DEPT_CODE, NVL(DEPT_TITLE, '소속없음'),
+JOB_NAME, HIRE_DATE
+FROM EMPLOYEE MAIN
+JOIN JOB USING(JOB_CODE)
+LEFT JOIN DEPARTMENT ON(DEPT_ID = DEPT_CODE)
+--WHERE ENT_YN = 'N'
+WHERE HIRE_DATE = (SELECT MIN(HIRE_DATE)
+								FROM EMPLOYEE SUB
+								WHERE MAIN.DEPT_CODE = SUB.DEPT_CODE
+								AND ENT_YN = 'N'
+								OR (SUB.DEPT_CODE IS NULL AND 
+								MAIN.DEPT_CODE IS NULL)) -- 소속없음까지 포함
+ORDER BY HIRE_DATE;
+
+
+
+
+
+
 
 
 
